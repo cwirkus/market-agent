@@ -15,97 +15,90 @@ function formatLarge(val) {
   return '$' + val.toLocaleString()
 }
 
-function IndexRow({ name, data }) {
-  if (!data) return null
-  const change = data.change_pct ?? 0
-  const isPositive = change >= 0
+function Row({ label, sub, price, change }) {
+  if (!price) return null
+  const isPositive = (change ?? 0) >= 0
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
-      <span className="text-xs text-subtext font-medium">{name}</span>
-      <div className="flex items-center gap-3">
-        <span className="text-xs price-mono text-text font-semibold">{formatPrice(data.price)}</span>
-        <span className={`flex items-center gap-1 text-xs font-mono w-16 justify-end ${isPositive ? 'text-gain' : 'text-loss'}`}>
+    <div className="flex items-center justify-between py-2.5 border-b border-border/40 last:border-0">
+      <div>
+        <div className="text-xs font-semibold text-text">{label}</div>
+        {sub && <div className="text-xs text-muted">{sub}</div>}
+      </div>
+      <div className="text-right">
+        <div className="text-xs price-mono font-semibold text-text">{formatPrice(price)}</div>
+        <div className={`flex items-center justify-end gap-0.5 text-xs font-mono ${isPositive ? 'text-gain' : 'text-loss'}`}>
           {isPositive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
           {isPositive ? '+' : ''}{change?.toFixed(2)}%
-        </span>
+        </div>
       </div>
     </div>
   )
 }
 
-function CryptoRow({ name, data }) {
-  if (!data) return null
-  const change = data.change_24h_pct ?? 0
-  const isPositive = change >= 0
+function SkeletonRows({ count = 3 }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
-      <div>
-        <span className="text-xs text-subtext font-medium">{data.symbol || name}</span>
-        <span className="text-xs text-muted ml-1.5">{formatLarge(data.market_cap)}</span>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-xs price-mono text-text font-semibold">{formatPrice(data.price)}</span>
-        <span className={`flex items-center gap-1 text-xs font-mono w-16 justify-end ${isPositive ? 'text-gain' : 'text-loss'}`}>
-          {isPositive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-          {isPositive ? '+' : ''}{change?.toFixed(2)}%
-        </span>
-      </div>
+    <div className="space-y-3 py-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex justify-between items-center">
+          <div className="w-20 h-3 skeleton rounded" />
+          <div className="w-16 h-3 skeleton rounded" />
+        </div>
+      ))}
     </div>
   )
 }
 
 export default function NewsPanel({ summary, loading }) {
   return (
-    <div className="space-y-4">
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <BarChart2 size={13} className="text-accent" />
-          <span className="text-sm font-semibold text-text">Market Indices</span>
+    <>
+      {/* Market Indices */}
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
+          <div className="w-6 h-6 rounded-md bg-blue-500/15 flex items-center justify-center">
+            <BarChart2 size={12} className="text-blue-400" />
+          </div>
+          <span className="text-xs font-bold text-text uppercase tracking-widest">Indices</span>
         </div>
         <div className="px-4">
-          {loading ? (
-            <div className="space-y-3 py-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-4 bg-gray-800 rounded animate-pulse" />
-              ))}
-            </div>
-          ) : summary?.indices ? (
+          {loading ? <SkeletonRows count={3} /> : summary?.indices ? (
             Object.entries(summary.indices).map(([name, data]) => (
-              <IndexRow key={name} name={name} data={data} />
+              data && <Row
+                key={name}
+                label={name.replace(' Jones', '').replace('Composite', '')}
+                price={data.price}
+                change={data.change_pct}
+              />
             ))
           ) : (
-            <p className="text-xs text-muted py-3">Unable to load indices</p>
+            <p className="text-xs text-muted py-3">Unable to load data</p>
           )}
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <Globe size={13} className="text-accent" />
-          <span className="text-sm font-semibold text-text">Crypto Leaders</span>
+      {/* Crypto Leaders */}
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
+          <div className="w-6 h-6 rounded-md bg-violet-500/15 flex items-center justify-center">
+            <Globe size={12} className="text-violet-400" />
+          </div>
+          <span className="text-xs font-bold text-text uppercase tracking-widest">Crypto</span>
         </div>
         <div className="px-4">
-          {loading ? (
-            <div className="space-y-3 py-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-4 bg-gray-800 rounded animate-pulse" />
-              ))}
-            </div>
-          ) : summary?.crypto ? (
+          {loading ? <SkeletonRows count={3} /> : summary?.crypto ? (
             Object.entries(summary.crypto).map(([name, data]) => (
-              <CryptoRow key={name} name={name} data={data} />
+              data && <Row
+                key={name}
+                label={data.symbol || name}
+                sub={formatLarge(data.market_cap)}
+                price={data.price}
+                change={data.change_24h_pct}
+              />
             ))
           ) : (
-            <p className="text-xs text-muted py-3">Unable to load crypto data</p>
+            <p className="text-xs text-muted py-3">Unable to load data</p>
           )}
         </div>
       </div>
-
-      {summary?.timestamp && (
-        <p className="text-xs text-muted text-center font-mono">
-          Last updated: {summary.timestamp}
-        </p>
-      )}
-    </div>
+    </>
   )
 }
