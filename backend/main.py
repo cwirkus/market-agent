@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import os
 
@@ -113,6 +114,16 @@ def portfolio_value(request: PortfolioRequest):
     if "error" in data:
         raise HTTPException(status_code=400, detail=data["error"])
     return data
+
+
+# Serve React frontend — must come AFTER all API routes
+DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(DIST):
+    app.mount("/assets", StaticFiles(directory=os.path.join(DIST, "assets")), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_frontend(full_path: str):
+        return FileResponse(os.path.join(DIST, "index.html"))
 
 
 if __name__ == "__main__":

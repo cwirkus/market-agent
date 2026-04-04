@@ -39,7 +39,7 @@ export default function App() {
   const [serverOnline, setServerOnline] = useState(null)
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/health`)
+    fetch(`${import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : 'http://localhost:8001'}/health`)
       .then(r => r.json())
       .then(d => setServerOnline(d.status === 'ok'))
       .catch(() => setServerOnline(false))
