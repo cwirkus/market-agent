@@ -120,15 +120,15 @@ export default function App() {
 
       {/* MAIN LAYOUT */}
       <div className="max-w-[1800px] mx-auto px-6 py-5">
-        <div className="flex gap-5" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="flex gap-5 items-start">
 
-          {/* LEFT: Watchlist */}
-          <div className="w-[220px] flex-shrink-0 overflow-y-auto">
+          {/* LEFT: Watchlist — sticky */}
+          <div className="w-[220px] flex-shrink-0 sticky top-[72px]">
             <WatchList onSelect={handleSelectAsset} selectedId={selectedAsset.id} />
           </div>
 
-          {/* CENTER: Chart + Market Data */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto pr-1">
+          {/* CENTER: Chart + Market Data — scrolls with page */}
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
 
             {/* Chart */}
             <PriceChart
@@ -184,8 +184,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* RIGHT: Chat */}
-          <div className="w-[400px] flex-shrink-0 flex flex-col">
+          {/* RIGHT: Chat — sticky */}
+          <div className="w-[400px] flex-shrink-0 sticky top-[72px]" style={{ height: 'calc(100vh - 88px)' }}>
             <Chat />
           </div>
 
