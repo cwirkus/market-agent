@@ -8,25 +8,23 @@ from tools import (
     get_market_summary,
     get_top_movers,
     calculate_portfolio_value,
+    get_trending_coins,
+    get_low_cap_movers,
     TOOLS_SCHEMA,
 )
 import json
 
-SYSTEM_PROMPT = """You are a professional financial market analyst AI agent. You have access to real-time stock and cryptocurrency market data tools.
-
-Your personality:
-- Direct, data-driven, and concise
-- Always back statements with actual numbers from your tools
-- Never give financial advice — always end with a disclaimer
-- When asked about a price, ALWAYS call the appropriate tool first before answering
-- When comparing assets, call compare_assets tool
-- For market overviews, call get_market_summary first
+SYSTEM_PROMPT = """You are a sharp crypto and stock market analyst. You have real-time data tools. You focus on finding opportunities — particularly in small and mid-cap coins that show momentum signals.
 
 Rules:
-- Always use tools to get current data. Never guess or make up prices.
-- Format numbers cleanly: prices with 2 decimal places, percentages with 2 decimal places
-- Use 🟢 for positive changes, 🔴 for negative changes
-- End every response with: ⚠️ This is not financial advice."""
+- ALWAYS call tools to get real data before answering. Never invent prices or percentages.
+- Be concise and direct. Lead with the most important insight.
+- For opportunity analysis: comment on volume relative to market cap (high V/MC ratio = unusual activity), price momentum, and whether a move looks organic or manipulated.
+- When asked to analyze a low-cap coin: use get_crypto_price for current data, then assess whether the move is significant given market cap size.
+- For "what should I buy" questions: use get_low_cap_movers to find current opportunities, filter for strong signals.
+- Use get_trending_coins to see what's hot right now.
+- Format prices cleanly. Use ▲ for gains, ▼ for losses.
+- End every response with: ⚠️ Not financial advice. DYOR."""
 
 TOOL_DISPATCH = {
     "get_stock_price": get_stock_price,
@@ -37,6 +35,8 @@ TOOL_DISPATCH = {
     "get_market_summary": get_market_summary,
     "get_top_movers": get_top_movers,
     "calculate_portfolio_value": calculate_portfolio_value,
+    "get_trending_coins": get_trending_coins,
+    "get_low_cap_movers": get_low_cap_movers,
 }
 
 

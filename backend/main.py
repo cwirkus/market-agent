@@ -17,6 +17,8 @@ from tools import (
     get_market_summary,
     get_top_movers,
     calculate_portfolio_value,
+    get_trending_coins,
+    get_low_cap_movers,
 )
 
 app = FastAPI(title="MarketAgent API", version="1.0.0")
@@ -73,6 +75,24 @@ def top_movers():
     data = get_top_movers()
     if "error" in data:
         raise HTTPException(status_code=502, detail=data["error"])
+    return data
+
+
+@app.get("/api/market/trending")
+def trending():
+    data = get_trending_coins()
+    if "error" in data:
+        raise HTTPException(status_code=502, detail=data["error"])
+    return data
+
+
+@app.get("/api/market/scanner")
+def scanner(min_mcap: int = 5_000_000, max_mcap: int = 2_000_000_000):
+    data = get_low_cap_movers(min_mcap, max_mcap)
+    if "error" in data:
+        raise HTTPException(status_code=502, detail=data["error"])
+    # Strip internal cache key before returning
+    data.pop("_raw", None)
     return data
 
 

@@ -1,196 +1,264 @@
 import React, { useState, useEffect } from 'react'
-import Chat from './components/Chat'
+import Scanner from './components/Scanner'
 import PriceChart from './components/PriceChart'
-import WatchList from './components/WatchList'
-import NewsPanel from './components/NewsPanel'
-import { useMarketSummary, useTopMovers } from './hooks/useMarket'
-import { TrendingUp, TrendingDown, Activity, Zap, Wifi, WifiOff } from 'lucide-react'
+import Chat from './components/Chat'
+import { useTrending } from './hooks/useMarket'
+import { TrendingUp, TrendingDown, BarChart2, MessageSquare, Zap } from 'lucide-react'
 
-function formatPrice(price) {
-  if (price === null || price === undefined) return '—'
-  if (price >= 1000) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  if (price >= 1) return '$' + price.toFixed(2)
-  return '$' + price.toFixed(4)
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+function fmtPrice(p) {
+  if (!p && p !== 0) return '—'
+  if (p >= 1000) return '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (p >= 1)    return '$' + p.toFixed(4)
+  if (p >= 0.01) return '$' + p.toFixed(5)
+  return '$' + p.toFixed(8)
 }
 
-function MoverCard({ asset }) {
-  const isPositive = (asset.change_pct ?? 0) >= 0
-  return (
-    <div className={`
-      relative rounded-xl px-3 py-3 border transition-all duration-200
-      ${isPositive
-        ? 'bg-gain/5 border-gain/20 hover:border-gain/40'
-        : 'bg-loss/5 border-loss/20 hover:border-loss/40'
-      }
-    `}>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-mono font-bold text-text tracking-wider">{asset.ticker}</span>
-        <span className={`text-xs font-mono font-bold ${isPositive ? 'text-gain' : 'text-loss'}`}>
-          {isPositive ? '+' : ''}{asset.change_pct?.toFixed(2)}%
-        </span>
+function fmt(n) {
+  if (!n) return '—'
+  if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B'
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M'
+  return '$' + (n / 1e3).toFixed(0) + 'K'
+}
+
+// ─── trending panel ──────────────────────────────────────────────────────────
+
+function TrendingPanel() {
+  const { data, loading, error, refetch } = useTrending()
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="skeleton h-24 rounded border border-border" />
+        ))}
       </div>
-      <div className="text-xs text-subtext price-mono">{formatPrice(asset.price)}</div>
+    )
+  }
+
+  if (error) {
+    return <p className="text-loss text-sm py-8 text-center">Failed to load trending coins.</p>
+  }
+
+  const coins = data?.trending ?? []
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-text">Trending Now</h2>
+          <p className="text-[11px] text-subtext mt-0.5">What traders are searching — CoinGecko trending</p>
+        </div>
+        <button
+          onClick={refetch}
+          className="text-[11px] text-subtext hover:text-text border border-border px-3 py-1.5 rounded transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {coins.map((coin, i) => {
+          const pos = coin.change_24h >= 0
+          return (
+            <div
+              key={coin.id}
+              className="border border-border bg-surface rounded p-4 hover:border-border2 transition-colors"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="num text-[10px] text-muted">#{i + 1}</span>
+                    <span className="text-xs font-bold text-text num tracking-wider">{coin.symbol}</span>
+                  </div>
+                  <div className="text-[11px] text-subtext mt-0.5">{coin.name}</div>
+                </div>
+                <span className={`text-[10px] font-semibold num ${pos ? 'text-gain' : 'text-loss'}`}>
+                  {pos ? '+' : ''}{coin.change_24h?.toFixed(2)}%
+                </span>
+              </div>
+              <div className="num text-sm font-semibold text-text">{fmtPrice(coin.price)}</div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-muted">MCap</span>
+                <span className="num text-[11px] text-subtext">{fmt(coin.market_cap)}</span>
+              </div>
+              {coin.rank && (
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[10px] text-muted">Rank</span>
+                  <span className="num text-[11px] text-subtext">#{coin.rank}</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {data?.timestamp && (
+        <p className="text-[11px] text-muted num">{data.timestamp}</p>
+      )}
     </div>
   )
 }
 
-function TickerItem({ name, data }) {
-  if (!data?.price) return null
-  const change = data.change_pct ?? 0
-  const isPos = change >= 0
-  return (
-    <span className="inline-flex items-center gap-2.5 px-5">
-      <span className="text-xs font-mono text-subtext font-medium">{name.replace(' Jones', '')}</span>
-      <span className="text-xs price-mono text-text font-semibold">{formatPrice(data.price)}</span>
-      <span className={`text-xs font-mono font-semibold ${isPos ? 'text-gain' : 'text-loss'}`}>
-        {isPos ? '+' : ''}{change?.toFixed(2)}%
-      </span>
-    </span>
-  )
-}
+// ─── tab definitions ─────────────────────────────────────────────────────────
+
+const TABS = [
+  { key: 'scanner',  label: 'Scanner',  icon: Zap },
+  { key: 'trending', label: 'Trending', icon: TrendingUp },
+  { key: 'chart',    label: 'Chart',    icon: BarChart2 },
+  { key: 'ai',       label: 'AI',       icon: MessageSquare },
+]
+
+// ─── main app ────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { data: summary, loading: summaryLoading } = useMarketSummary()
-  const { data: movers, loading: moversLoading } = useTopMovers()
-  const [selectedAsset, setSelectedAsset] = useState({ id: 'bitcoin', type: 'crypto', name: 'Bitcoin' })
-  const [serverOnline, setServerOnline] = useState(null)
+  const [tab, setTab]             = useState('scanner')
+  const [serverOnline, setOnline] = useState(null)
+  const [chartAsset, setChartAsset] = useState({ id: 'bitcoin', type: 'crypto', name: 'Bitcoin' })
+  const [aiPrompt, setAiPrompt]   = useState(null)  // triggers AI chat with pre-filled message
 
   useEffect(() => {
     fetch('/health')
       .then(r => r.json())
-      .then(d => setServerOnline(d.status === 'ok'))
-      .catch(() => setServerOnline(false))
+      .then(d => setOnline(d.status === 'ok'))
+      .catch(() => setOnline(false))
   }, [])
 
-  const handleSelectAsset = (id, type, name) => setSelectedAsset({ id, type, name })
-
-  const tickerItems = summary?.indices ? Object.entries(summary.indices) : []
-  const doubled = [...tickerItems, ...tickerItems]
+  function handleAnalyze(coin) {
+    setAiPrompt(`Give me a detailed analysis of ${coin.name} (${coin.symbol}). Include: current price momentum, whether the volume spike is significant (Vol/MCap: ${coin.vol_mcap_ratio}), what the 24h move of ${coin.change_24h}% suggests, and whether this looks like a genuine opportunity or a pump to avoid.`)
+    setTab('ai')
+  }
 
   return (
-    <div className="min-h-screen bg-bg text-text">
+    <div className="min-h-screen bg-bg text-text flex flex-col">
 
-      {/* NAVBAR */}
-      <header className="sticky top-0 z-50 border-b border-border bg-surface/90 backdrop-blur-md">
-        <div className="max-w-[1800px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
+      {/* ── Header ── */}
+      <header className="flex-shrink-0 border-b border-border bg-surface">
+        <div className="max-w-[1600px] mx-auto px-5 h-12 flex items-center gap-6">
 
           {/* Logo */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-violet-600 flex items-center justify-center shadow-lg shadow-accent/30">
-              <Activity size={15} className="text-white" />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <TrendingDown size={16} className="text-gain" style={{ transform: 'scaleY(-1)' }} />
             </div>
-            <div>
-              <span className="text-sm font-bold text-text tracking-tight">MarketAgent</span>
-              <span className="hidden sm:inline text-xs text-muted ml-2 font-mono">AI-Powered Intelligence</span>
-            </div>
+            <span className="text-sm font-bold text-text tracking-tight">SCOUT</span>
+            <span className="text-[10px] text-muted ml-1 tracking-widest uppercase">Terminal</span>
           </div>
 
-          {/* Ticker (scrolling) */}
-          {tickerItems.length > 0 && (
-            <div className="flex-1 overflow-hidden mx-4">
-              <div className="flex ticker-track whitespace-nowrap">
-                {doubled.map(([name, data], i) => (
-                  <TickerItem key={`${name}-${i}`} name={name} data={data} />
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Divider */}
+          <div className="w-px h-5 bg-border flex-shrink-0" />
+
+          {/* Tabs */}
+          <nav className="flex items-center gap-0 h-full">
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`
+                  flex items-center gap-1.5 px-4 h-12 text-xs font-medium
+                  border-b-2 transition-colors
+                  ${tab === key
+                    ? 'border-gain text-text'
+                    : 'border-transparent text-subtext hover:text-text'
+                  }
+                `}
+              >
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Spacer */}
+          <div className="flex-1" />
 
           {/* Status */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {serverOnline === true ? (
-              <div className="flex items-center gap-1.5 bg-gain/10 border border-gain/20 rounded-full px-3 py-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-gain animate-pulse" />
-                <span className="text-xs text-gain font-medium">Live</span>
-              </div>
-            ) : serverOnline === false ? (
-              <div className="flex items-center gap-1.5 bg-loss/10 border border-loss/20 rounded-full px-3 py-1">
-                <WifiOff size={11} className="text-loss" />
-                <span className="text-xs text-loss font-medium">Offline</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                <span className="text-xs text-yellow-400 font-medium">Connecting</span>
-              </div>
-            )}
-          </div>
+          {serverOnline === true && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-gain" />
+              <span className="text-[11px] text-subtext">Live</span>
+            </div>
+          )}
+          {serverOnline === false && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-loss" />
+              <span className="text-[11px] text-loss">Offline</span>
+            </div>
+          )}
+          {serverOnline === null && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber animate-pulse" />
+              <span className="text-[11px] text-subtext">Connecting</span>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* MAIN LAYOUT */}
-      <div className="max-w-[1800px] mx-auto px-6 py-5">
-        <div className="flex gap-5 items-start">
+      {/* ── Content ── */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-5 py-5">
 
-          {/* LEFT: Watchlist — sticky */}
-          <div className="w-[220px] flex-shrink-0 sticky top-[72px]">
-            <WatchList onSelect={handleSelectAsset} selectedId={selectedAsset.id} />
-          </div>
-
-          {/* CENTER: Chart + Market Data — scrolls with page */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4">
-
-            {/* Chart */}
-            <PriceChart
-              assetId={selectedAsset.id}
-              assetType={selectedAsset.type}
-              assetName={selectedAsset.name}
-            />
-
-            {/* Market Data Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <NewsPanel summary={summary} loading={summaryLoading} />
-            </div>
-
-            {/* Top Movers */}
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
-                <div className="w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center">
-                  <Zap size={12} className="text-accent" />
-                </div>
-                <span className="text-sm font-semibold text-text">Top Movers</span>
-                <span className="text-xs text-muted ml-1 font-mono">24h</span>
+        {/* Scanner tab */}
+        {tab === 'scanner' && (
+          <div>
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <h1 className="text-base font-bold text-text tracking-tight">Opportunity Scanner</h1>
+                <p className="text-[11px] text-subtext mt-0.5">
+                  Small &amp; mid-cap coins ranked 101–400 by market cap · sorted by 24h momentum
+                </p>
               </div>
-              {moversLoading ? (
-                <div className="p-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
-                  {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="h-16 skeleton rounded-xl" />
-                  ))}
-                </div>
-              ) : movers ? (
-                <div className="p-4 space-y-4">
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-2.5">
-                      <TrendingUp size={11} className="text-gain" />
-                      <span className="text-xs text-gain font-semibold tracking-wide uppercase">Gainers</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(movers.gainers || []).map(a => <MoverCard key={a.ticker} asset={a} />)}
-                    </div>
-                  </div>
-                  <div className="border-t border-border pt-4">
-                    <div className="flex items-center gap-1.5 mb-2.5">
-                      <TrendingDown size={11} className="text-loss" />
-                      <span className="text-xs text-loss font-semibold tracking-wide uppercase">Losers</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(movers.losers || []).map(a => <MoverCard key={a.ticker} asset={a} />)}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted p-5">Unable to load movers</p>
-              )}
+            </div>
+            <Scanner onAnalyze={handleAnalyze} />
+          </div>
+        )}
+
+        {/* Trending tab */}
+        {tab === 'trending' && (
+          <div>
+            <div className="mb-4">
+              <h1 className="text-base font-bold text-text tracking-tight">Trending Coins</h1>
+              <p className="text-[11px] text-subtext mt-0.5">
+                Most searched coins on CoinGecko right now
+              </p>
+            </div>
+            <TrendingPanel />
+          </div>
+        )}
+
+        {/* Chart tab */}
+        {tab === 'chart' && (
+          <div>
+            <div className="mb-4">
+              <h1 className="text-base font-bold text-text tracking-tight">Price Chart</h1>
+              <p className="text-[11px] text-subtext mt-0.5">Historical price data</p>
+            </div>
+            <div className="max-w-[900px]">
+              <PriceChart
+                assetId={chartAsset.id}
+                assetType={chartAsset.type}
+                assetName={chartAsset.name}
+              />
             </div>
           </div>
+        )}
 
-          {/* RIGHT: Chat — sticky */}
-          <div className="w-[400px] flex-shrink-0 sticky top-[72px]" style={{ height: 'calc(100vh - 88px)' }}>
-            <Chat />
+        {/* AI tab */}
+        {tab === 'ai' && (
+          <div>
+            <div className="mb-4">
+              <h1 className="text-base font-bold text-text tracking-tight">AI Analyst</h1>
+              <p className="text-[11px] text-subtext mt-0.5">
+                Ask about any coin, stock, or market condition
+              </p>
+            </div>
+            <div className="max-w-[780px]" style={{ height: 'calc(100vh - 160px)' }}>
+              <Chat initialMessage={aiPrompt} onPromptConsumed={() => setAiPrompt(null)} />
+            </div>
           </div>
+        )}
 
-        </div>
-      </div>
+      </main>
     </div>
   )
 }

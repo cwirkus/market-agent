@@ -18,6 +18,12 @@ export const getMarketSummary = () =>
 export const getTopMovers = () =>
   api.get('/api/market/top-movers').then(r => r.data)
 
+export const getTrending = () =>
+  api.get('/api/market/trending').then(r => r.data)
+
+export const getScanner = (params = {}) =>
+  api.get('/api/market/scanner', { params }).then(r => r.data)
+
 export const getStockData = (ticker) =>
   api.get(`/api/stock/${ticker}`).then(r => r.data)
 
