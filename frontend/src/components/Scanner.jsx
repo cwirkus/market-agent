@@ -234,15 +234,25 @@ export default function Scanner({ onAnalyze }) {
             </thead>
             <tbody>
               {loading && !data && (
-                Array.from({ length: 12 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border/50">
-                    {Array.from({ length: 10 }).map((_, j) => (
-                      <td key={j} className="px-3 py-3">
-                        <div className="skeleton h-3.5 rounded w-full" />
-                      </td>
-                    ))}
+                <>
+                  <tr>
+                    <td colSpan={10} className="px-4 pt-6 pb-1 text-center">
+                      <div className="flex items-center justify-center gap-2 text-xs text-subtext">
+                        <RefreshCw size={12} className="spin-slow text-gain" />
+                        Fetching coins from CoinGecko — this takes ~15s on first load...
+                      </div>
+                    </td>
                   </tr>
-                ))
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      {Array.from({ length: 10 }).map((_, j) => (
+                        <td key={j} className="px-3 py-3">
+                          <div className="skeleton h-3.5 rounded w-full" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </>
               )}
 
               {!loading && error && (

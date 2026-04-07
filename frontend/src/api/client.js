@@ -22,7 +22,7 @@ export const getTrending = () =>
   api.get('/api/market/trending').then(r => r.data)
 
 export const getScanner = (params = {}) =>
-  api.get('/api/market/scanner', { params }).then(r => r.data)
+  api.get('/api/market/scanner', { params, timeout: 120000 }).then(r => r.data)
 
 export const getStockData = (ticker) =>
   api.get(`/api/stock/${ticker}`).then(r => r.data)

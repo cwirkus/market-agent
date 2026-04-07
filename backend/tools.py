@@ -8,7 +8,7 @@ cg = CoinGeckoAPI()
 # Simple in-memory caches to avoid hammering free APIs
 _scanner_cache = {'data': None, 'ts': 0}
 _trending_cache = {'data': None, 'ts': 0}
-CACHE_TTL = 120  # 2 minutes
+CACHE_TTL = 300  # 5 minutes
 
 
 def get_stock_price(ticker: str) -> dict:
@@ -309,7 +309,7 @@ def get_low_cap_movers(min_mcap: int = 5_000_000, max_mcap: int = 2_000_000_000)
 
     try:
         all_coins = []
-        for page in [2, 3, 4]:
+        for page in [2, 3]:
             try:
                 page_data = cg.get_coins_markets(
                     vs_currency='usd',
